@@ -55,11 +55,11 @@ FONT_MAP = {
 }
 
 def apply_font(text: str) -> str:
-    """Applies the custom font style and wraps in a Telegram quote block."""
+    """Applies the custom font style."""
     res = ""
     for char in text:
         res += FONT_MAP.get(char, char)
-    return f"<blockquote>{res}</blockquote>"
+    return res
 
 # Provided sample: ᴧʙᴄᴅє ꜰσʀ ϻησ ᴘǫʀꜱᴛ
 # This matches the characters in the mapping.
