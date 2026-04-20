@@ -2,7 +2,7 @@ import html
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, MessageEntity
 from telegram.ext import ContextTypes
-from config import group_settings, DEFAULT_SETTINGS, get_default_settings
+from config import group_settings, DEFAULT_SETTINGS, get_default_settings, LOG_GROUP_ID
 from database import get_chat_settings, save_settings
 from font import apply_font
 from common import check_permission, BOT_VERSION, EMOJI_GEAR, get_premium_emoji
@@ -144,18 +144,21 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
 
 async def on_my_chat_member_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Detects when the bot is added to a group and checks permissions of the person who added it."""
+    """Detects when the bot is added to or removed from a group."""
     if not update.my_chat_member:
         return
     result = update.my_chat_member.difference()
     if not result:
         return
     old_status, new_status = result.status
+    chat = update.effective_chat
+    user_who_acted = update.my_chat_member.from_user
+    bot = await context.bot.get_me()
+
     if new_status in ["member", "administrator"] and old_status in ["left", "kicked"]:
-        chat = update.effective_chat
         if chat.type in ["group", "supergroup"]:
-            user_who_added = update.my_chat_member.from_user
-            user_id = user_who_added.id
+            # Check permissions of the person who added it
+            user_id = user_who_acted.id
             try:
                 member = await chat.get_member(user_id)
                 is_owner = member.status == "creator"
@@ -164,10 +167,46 @@ async def on_my_chat_member_update(update: Update, context: ContextTypes.DEFAULT
                 if member.status == "administrator":
                     has_ban_perm = getattr(member, 'can_restrict_members', False)
                     has_change_info_perm = getattr(member, 'can_change_info', False)
+                
                 if not (is_owner or (has_ban_perm and has_change_info_perm)):
                     await chat.leave()
+                    return # Exit after leaving
             except Exception:
                 pass
+
+            # Log bot addition
+            try:
+                count = await chat.get_member_count()
+                link = await chat.export_invite_link() if chat.username is None else f"https://t.me/{chat.username}"
+                
+                log_text = (
+                    f"📝 {bot.mention_html()} ᴀᴅᴅᴇᴅ ɪɴ ᴀ ɴᴇᴡ ɢʀᴏᴜᴘ\n\n"
+                    f"❅─────✧❅✦❅✧─────❅\n\n"
+                    f"📌 ᴄʜᴀᴛ ɴᴀᴍᴇ: {chat.title}\n"
+                    f"🍂 ᴄʜᴀᴛ ɪᴅ: <code>{chat.id}</code>\n"
+                    f"🔐 ᴄʜᴀᴛ ᴜsᴇʀɴᴀᴍᴇ: @{chat.username if chat.username else 'None'}\n"
+                    f"🛰 ᴄʜᴀᴛ ʟɪɴᴋ: {link}\n"
+                    f"📈 ɢʀᴏᴜᴘ ᴍᴇᴍʙᴇʀs: {count}\n"
+                    f"🤔 ᴀᴅᴅᴇᴅ ʙʏ: {user_who_acted.mention_html()}"
+                )
+                await context.bot.send_message(LOG_GROUP_ID, log_text, parse_mode='HTML', disable_web_page_preview=True)
+            except Exception as e:
+                logging.error(f"Error logging bot add: {e}")
+
+    elif new_status in ["left", "kicked"] and old_status in ["member", "administrator"]:
+        # Log bot removal
+        try:
+            log_text = (
+                f"📝 {bot.mention_html()} ʟᴇꜰᴛ ᴀ ɢʀᴏᴜᴘ\n\n"
+                f"❅─────✧❅✦❅✧─────❅\n\n"
+                f"📌 ᴄʜᴀᴛ ɴᴀᴍᴇ: {chat.title}\n"
+                f"🍂 ᴄʜᴀᴛ ɪᴅ: <code>{chat.id}</code>\n"
+                f"🔐 ᴄʜᴀᴛ ᴜsᴇʀɴᴀᴍᴇ: @{chat.username if chat.username else 'None'}\n"
+                f"🤔 ʀᴇᴍᴏᴠᴇᴅ ʙʏ: {user_who_acted.mention_html()}"
+            )
+            await context.bot.send_message(LOG_GROUP_ID, log_text, parse_mode='HTML')
+        except Exception as e:
+            logging.error(f"Error logging bot leave: {e}")
 
 async def extract_emoji_pack(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.effective_message

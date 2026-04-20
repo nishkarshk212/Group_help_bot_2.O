@@ -10,6 +10,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "8409128631:AAGg9_TZ63BglZCQK0IEoS2HF9NmEYqo-
 # MongoDB URI
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://lilyy67u_db_user:Nishkarsh123@grouphelp2.06f2yus.mongodb.net/?appName=Grouphelp2")
 
+# Log Group ID
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "-1003757375746"))
+
 # In-memory storage (fallback/cache)
 group_settings = {}
 
