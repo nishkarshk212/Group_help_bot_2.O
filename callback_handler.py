@@ -148,10 +148,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     if data == "settings_main" or data == "open_settings_here":
-        gear = get_premium_emoji(EMOJI_GEAR, "🛠")
-        text = f"{gear} Group Settings {gear}\n\nSelect a category:"
+        text = "🛠 Group Settings 🛠\n\nSelect a category:"
         try:
-            await query.message.edit_text(text, reply_markup=await get_main_settings_keyboard(), parse_mode='HTML')
+            await query.message.edit_text(text, reply_markup=await get_main_settings_keyboard())
         except Exception as e:
             logging.error(f"Error opening settings: {e}")
             await query.answer("Failed to open settings. Try again or use /settings in private.", show_alert=True)
