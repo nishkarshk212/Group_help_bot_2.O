@@ -96,7 +96,11 @@ async def handle_blocking(update: Update, context):
             should_delete = True
             
     # Check for forwarded messages
-    if msg.forward_origin is not None:
+    # Note: PTB v20.x uses forward_from, PTB v21+ uses forward_origin
+    is_forwarded = (hasattr(msg, 'forward_origin') and msg.forward_origin is not None) or \
+                   (hasattr(msg, 'forward_from') and msg.forward_from is not None)
+    
+    if is_forwarded:
         import logging
         logging.info(f"Forward check: User {update.effective_user.id} sent forwarded message in chat {chat_id}")
         logging.info(f"Forward check: block_forward={settings.get('block_forward')}, is_user_freed={is_user_freed('block_forward')}")
@@ -104,8 +108,11 @@ async def handle_blocking(update: Update, context):
         if settings.get("block_forward") and not is_user_freed("block_forward"):
             logging.info(f"Forward blocking: Deleting forwarded message from user {update.effective_user.id} in chat {chat_id}")
             should_delete = True
-        elif getattr(msg.forward_origin, 'chat', None) and msg.forward_origin.chat.type == "channel" and settings.get("block_channel_post") and not is_user_freed("block_channel_post"):
+        elif getattr(msg, 'forward_origin', None) and getattr(msg.forward_origin, 'chat', None) and msg.forward_origin.chat.type == "channel" and settings.get("block_channel_post") and not is_user_freed("block_channel_post"):
             logging.info(f"Channel post blocking: Deleting channel post from user {update.effective_user.id}")
+            should_delete = True
+        elif getattr(msg, 'forward_from_chat', None) and msg.forward_from_chat.type == "channel" and settings.get("block_channel_post") and not is_user_freed("block_channel_post"):
+            logging.info(f"Channel post blocking (old API): Deleting channel post from user {update.effective_user.id}")
             should_delete = True
     else:
         import logging
@@ -156,7 +163,10 @@ async def handle_blocking(update: Update, context):
                 return False
             
             # Send notification for forwarded messages
-            if msg.forward_origin is not None and settings.get("block_forward"):
+            is_forwarded_msg = (hasattr(msg, 'forward_origin') and msg.forward_origin is not None) or \
+                              (hasattr(msg, 'forward_from') and msg.forward_from is not None)
+            
+            if is_forwarded_msg and settings.get("block_forward"):
                 try:
                     await msg.reply_text(
                         f"⚠️ <b>Forwarded messages are not allowed in this group.</b>\n\n"

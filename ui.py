@@ -143,18 +143,18 @@ async def get_user_permissions_keyboard(user_id: int, chat_id: int):
     return InlineKeyboardMarkup(keyboard)
 
 async def get_main_settings_keyboard():
-    """Returns the main settings menu keyboard in 2 columns, 7 rows."""
+    """Returns the main settings menu keyboard optimized for mobile."""
     keyboard = [
         [
-            InlineKeyboardButton(apply_font("Blocks 🔐"), callback_data="settings_blocking"),
-            InlineKeyboardButton(apply_font("📏 Message Length"), callback_data="settings_msg_length")
+            InlineKeyboardButton(apply_font("🔐 Blocks"), callback_data="settings_blocking"),
+            InlineKeyboardButton(apply_font("📏 Msg Length"), callback_data="settings_msg_length")
         ],
         [
-            InlineKeyboardButton(apply_font("👋 Welcome Settings"), callback_data="settings_welcome"),
-            InlineKeyboardButton(apply_font("📜 Group Regulations"), callback_data="settings_rules")
+            InlineKeyboardButton(apply_font("👋 Welcome"), callback_data="settings_welcome"),
+            InlineKeyboardButton(apply_font("📜 Rules"), callback_data="settings_rules")
         ],
         [
-            InlineKeyboardButton(apply_font("⏱ Self Destruction"), callback_data="settings_self_destruct"),
+            InlineKeyboardButton(apply_font("⏱ Auto-Delete"), callback_data="settings_self_destruct"),
             InlineKeyboardButton(apply_font("🛡 Anti-Spam"), callback_data="settings_antispam")
         ],
         [
@@ -163,18 +163,18 @@ async def get_main_settings_keyboard():
         ],
         [
             InlineKeyboardButton(apply_font("🕹 Permissions"), callback_data="settings_permissions_menu"),
-            InlineKeyboardButton(apply_font("👥 Members Management"), callback_data="settings_members_mgmt")
+            InlineKeyboardButton(apply_font("👥 Members"), callback_data="settings_members_mgmt")
         ],
         [
-            InlineKeyboardButton(apply_font("🧹 Clean Service"), callback_data="settings_clean"),
-            InlineKeyboardButton(apply_font("🚫 Custom Blocking"), callback_data="settings_custom")
+            InlineKeyboardButton(apply_font("🧹 Cleaner"), callback_data="settings_clean"),
+            InlineKeyboardButton(apply_font("🚫 Custom Block"), callback_data="settings_custom")
         ],
         [
-            InlineKeyboardButton(apply_font("🆘 @admin Command"), callback_data="settings_report"),
-            InlineKeyboardButton(apply_font("🛡️ Bot Protection"), callback_data="settings_bot_protection")
+            InlineKeyboardButton(apply_font("🆘 @admin"), callback_data="settings_report"),
+            InlineKeyboardButton(apply_font("🛡️ Bot Protect"), callback_data="settings_bot_protection")
         ],
         [
-            InlineKeyboardButton(apply_font("Close 🔒"), callback_data="close_settings")
+            InlineKeyboardButton(apply_font("❌ Close"), callback_data="close_settings")
         ]
     ]
     return InlineKeyboardMarkup(keyboard)
