@@ -95,21 +95,23 @@ async def get_user_roles_keyboard(user_id: int, chat_id: int):
 async def get_user_permissions_keyboard(user_id: int, chat_id: int):
     """Returns the detailed user permissions keyboard."""
     settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
-    # For now we use global group settings or a specific user override if implemented
-    # This is a mock UI based on the screenshot
+    user_perms = settings.get("user_permissions", {}).get(user_id, {})
     
-    def p_btn(label, icon, status=True):
+    def p_btn(label, perm_key, status=None):
+        # If status not provided, get it from user_perms
+        if status is None:
+            status = user_perms.get(perm_key, False)
         icon_status = "✅" if status else "❌"
-        return InlineKeyboardButton(f"{icon_status} {label}", callback_data="noop")
+        return InlineKeyboardButton(f"{icon_status} {label}", callback_data=f"toggle_perm_{user_id}_{perm_key}")
 
     keyboard = [
-        [p_btn("Text messages", "")],
-        [p_btn("Photo", ""), p_btn("Video", "")],
-        [p_btn("Sticker/GIF", ""), p_btn("Audio", "")],
-        [p_btn("Voice", ""), p_btn("File", "")],
-        [p_btn("Round Video", ""), p_btn("Polls", "")],
-        [p_btn("Enable link previews", "")],
-        [p_btn("Edit own tag", "", False)],
+        [p_btn("Text messages", "block_text")],
+        [p_btn("Photo", "block_media"), p_btn("Video", "block_video")],
+        [p_btn("Sticker/GIF", "block_stickers"), p_btn("Audio", "block_audio")],
+        [p_btn("Voice", "block_voice"), p_btn("File", "block_documents")],
+        [p_btn("Round Video", "block_video_note"), p_btn("Polls", "block_poll")],
+        [p_btn("Enable link previews", "block_link")],
+        [p_btn("Edit own tag", "block_embed_link", False)],
         [
             InlineKeyboardButton("Save ✔️", callback_data=f"user_info_{user_id}"),
             InlineKeyboardButton("Close 🔒", callback_data="close_settings")

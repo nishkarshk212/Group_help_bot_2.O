@@ -139,7 +139,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_settings[chat_id] = get_default_settings()
 
     is_private = query.message.chat.type == "private"
-    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link"]
+    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link", "toggle_perm_"]
     
     if not is_private and any(data.startswith(prefix) for prefix in admin_only_data):
         member = await context.bot.get_chat_member(chat_id, query.from_user.id)
@@ -794,6 +794,32 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data.startswith("user_perms_"):
         user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            text = (
+                f"🕹 <b>Permissions</b>\n"
+                f"👤 {member.user.mention_html()} [<code>{user_id}</code>]\n"
+                f"👥 {query.message.chat.title or 'Group'}"
+            )
+            await query.message.edit_text(text, reply_markup=await get_user_permissions_keyboard(user_id, chat_id), parse_mode='HTML')
+        except: pass
+
+    elif data.startswith("toggle_perm_"):
+        parts = data.split("_")
+        user_id = int(parts[2])
+        perm_key = "_".join(parts[3:])
+        
+        settings = await get_chat_settings(chat_id)
+        if "user_permissions" not in settings:
+            settings["user_permissions"] = {}
+        if user_id not in settings["user_permissions"]:
+            settings["user_permissions"][user_id] = {}
+        
+        # Toggle the permission
+        settings["user_permissions"][user_id][perm_key] = not settings["user_permissions"][user_id].get(perm_key, False)
+        await save_settings(chat_id)
+        
+        # Refresh the keyboard
         try:
             member = await context.bot.get_chat_member(chat_id, user_id)
             text = (
