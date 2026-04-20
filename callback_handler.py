@@ -687,7 +687,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👋 {apply_font('Hello!')}\n"
             f"{bot_mention} {apply_font('is the most complete Bot to help you manage your groups easily and safely!')}\n\n"
             f"👉 {apply_font('Add me in a Supergroup and promote me as Admin to let me get in action!')}\n\n"
-            f"<i>{apply_font('Check my buttons below to get more info about me.')}</i>"
+            f"{apply_font('Check my buttons below to get more info about me.')}"
         )
         keyboard = [
             [InlineKeyboardButton(f"➕ {apply_font('Add me to a Group')} ➕", url=f"https://t.me/{bot.username}?startgroup=true")],
