@@ -791,12 +791,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(data.split("_")[2])
         try:
             member = await context.bot.get_chat_member(chat_id, user_id)
+            settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+            user_perms = settings.get("user_permissions", {}).get(user_id, {})
+            
+            # Count how many permissions are enabled
+            enabled_count = sum(1 for v in user_perms.values() if v)
+            total_count = len([
+                "block_stickers", "block_media", "block_documents", "block_forward",
+                "block_command", "block_premium_sticker", "block_channel_post",
+                "block_contact", "block_location", "block_voice", "block_video_note",
+                "block_poll", "block_embed_link", "block_link"
+            ])
+            
             text = (
-                f"🕹 <b>Permissions</b>\n"
-                f"👤 {member.user.mention_html()} [<code>{user_id}</code>]\n"
-                f"👥 {query.message.chat.title or 'Group'}"
+                f"<b>Block Settings for</b> {member.user.mention_html()}\n"
+                f"<code>{user_id}</code>\n\n"
+                f"🔓 <b>Exemptions:</b> {enabled_count}/{total_count} enabled\n\n"
+                f"<i>Toggle buttons to enable/disable block exemptions for this user.\n"
+                f"✅ means the user is EXEMPT from that block (allowed).\n"
+                f"❌ means the block applies to this user (blocked).</i>"
             )
-            await query.message.edit_text(text, reply_markup=await get_user_permissions_keyboard(user_id, chat_id), parse_mode='HTML')
+            await query.message.edit_text(text, reply_markup=await get_permissions_keyboard(chat_id, user_id), parse_mode='HTML')
         except: pass
 
     elif data.startswith("user_perms_"):
@@ -839,6 +854,47 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👥 {query.message.chat.title or 'Group'}"
             )
             await query.message.edit_text(text, reply_markup=await get_user_permissions_keyboard(user_id, chat_id), parse_mode='HTML')
+        except: pass
+
+    elif data.startswith("perm_"):
+        # Handle block exemption toggles from get_permissions_keyboard
+        parts = data.split("_")
+        user_id = int(parts[1])
+        perm_key = "_".join(parts[2:])
+        
+        # Initialize user_permissions in both cache and DB
+        if chat_id not in group_settings:
+            group_settings[chat_id] = get_default_settings()
+        if "user_permissions" not in group_settings[chat_id]:
+            group_settings[chat_id]["user_permissions"] = {}
+        if user_id not in group_settings[chat_id]["user_permissions"]:
+            group_settings[chat_id]["user_permissions"][user_id] = {}
+        
+        # Toggle the permission in cache
+        group_settings[chat_id]["user_permissions"][user_id][perm_key] = not group_settings[chat_id]["user_permissions"][user_id].get(perm_key, False)
+        
+        # Save to database
+        await save_settings(chat_id)
+        
+        # Refresh the keyboard and update text
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+            user_perms = settings.get("user_permissions", {}).get(user_id, {})
+            
+            # Count how many permissions are enabled
+            enabled_count = sum(1 for v in user_perms.values() if v)
+            total_count = 14  # Total number of block types
+            
+            text = (
+                f"<b>Block Settings for</b> {member.user.mention_html()}\n"
+                f"<code>{user_id}</code>\n\n"
+                f"🔓 <b>Exemptions:</b> {enabled_count}/{total_count} enabled\n\n"
+                f"<i>Toggle buttons to enable/disable block exemptions for this user.\n"
+                f"✅ means the user is EXEMPT from that block (allowed).\n"
+                f"❌ means the block applies to this user (blocked).</i>"
+            )
+            await query.message.edit_text(text, reply_markup=await get_permissions_keyboard(chat_id, user_id), parse_mode='HTML')
         except: pass
 
     elif data.startswith("unmute_user_"):
