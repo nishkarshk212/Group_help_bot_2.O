@@ -140,7 +140,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_settings[chat_id] = get_default_settings()
 
     is_private = query.message.chat.type == "private"
-    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link", "toggle_perm_", "unmute_user_", "user_mute_", "user_ban_"]
+    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link", "toggle_perm_", "unmute_user_", "user_mute_", "user_ban_", "adm_choice_", "adm_perm_", "adm_save_", "adm_remove_"]
     
     if not is_private and any(data.startswith(prefix) for prefix in admin_only_data):
         member = await context.bot.get_chat_member(chat_id, query.from_user.id)
@@ -1033,5 +1033,107 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "close_settings":
         await query.message.delete()
+
+    # Admin permission choice handlers
+    elif data.startswith("adm_choice_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            text = (
+                f"<b>Admin Permissions for</b> {member.user.mention_html()}\n"
+                f"<code>{user_id}</code>\n\n"
+                f"<i>Select which permissions to grant this admin.\n"
+                f"Toggle the buttons below to enable/disable each permission.</i>"
+            )
+            # Get current admin permissions (default to none)
+            current_perms = group_settings.get(chat_id, {}).get("admin_permissions", {}).get(str(user_id), {})
+            keyboard = await get_admin_permissions_keyboard(user_id, current_perms)
+            await query.message.edit_text(text, reply_markup=keyboard, parse_mode='HTML')
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+    
+    elif data.startswith("adm_perm_"):
+        parts = data.split("_")
+        user_id = int(parts[2])
+        perm_key = "_".join(parts[3:])
+        
+        # Initialize admin_permissions in cache
+        if chat_id not in group_settings:
+            group_settings[chat_id] = get_default_settings()
+        if "admin_permissions" not in group_settings[chat_id]:
+            group_settings[chat_id]["admin_permissions"] = {}
+        if str(user_id) not in group_settings[chat_id]["admin_permissions"]:
+            group_settings[chat_id]["admin_permissions"][str(user_id)] = {}
+        
+        # Toggle the permission
+        group_settings[chat_id]["admin_permissions"][str(user_id)][perm_key] = not group_settings[chat_id]["admin_permissions"][str(user_id)].get(perm_key, False)
+        
+        # Refresh the keyboard
+        current_perms = group_settings[chat_id]["admin_permissions"][str(user_id)]
+        await query.message.edit_reply_markup(reply_markup=await get_admin_permissions_keyboard(user_id, current_perms))
+    
+    elif data.startswith("adm_save_"):
+        user_id = int(data.split("_")[2])
+        try:
+            # Save to database
+            await save_settings(chat_id)
+            
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            await query.answer(f"Permissions saved for {member.user.first_name}!", show_alert=True)
+            
+            # Try to promote the user in Telegram with the selected permissions
+            admin_perms = group_settings.get(chat_id, {}).get("admin_permissions", {}).get(str(user_id), {})
+            try:
+                await context.bot.promote_chat_member(
+                    chat_id,
+                    user_id,
+                    can_change_info=admin_perms.get("can_change_info", False),
+                    can_post_messages=admin_perms.get("can_post_messages", False),
+                    can_edit_messages=admin_perms.get("can_edit_messages", False),
+                    can_delete_messages=admin_perms.get("can_delete_messages", False),
+                    can_restrict_members=admin_perms.get("can_restrict_members", False),
+                    can_invite_users=admin_perms.get("can_invite_users", False),
+                    can_pin_messages=admin_perms.get("can_pin_messages", False),
+                    can_promote_members=admin_perms.get("can_promote_members", False),
+                    can_manage_chat=admin_perms.get("can_manage_chat", True),
+                    can_manage_video_chats=admin_perms.get("can_manage_video_chats", False),
+                    can_post_stories=admin_perms.get("can_post_stories", False),
+                    can_edit_stories=admin_perms.get("can_edit_stories", False),
+                    can_delete_stories=admin_perms.get("can_delete_stories", False),
+                    can_manage_topics=admin_perms.get("can_manage_topics", False),
+                    is_anonymous=admin_perms.get("is_anonymous", False)
+                )
+            except Exception as e:
+                await query.answer(f"Saved but Telegram error: {str(e)[:50]}", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+    
+    elif data.startswith("adm_remove_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            # Demote the user
+            await context.bot.promote_chat_member(
+                chat_id,
+                user_id,
+                can_change_info=False,
+                can_post_messages=False,
+                can_edit_messages=False,
+                can_delete_messages=False,
+                can_restrict_members=False,
+                can_invite_users=False,
+                can_pin_messages=False,
+                can_promote_members=False
+            )
+            
+            # Remove from cache
+            if chat_id in group_settings and "admin_permissions" in group_settings[chat_id]:
+                if str(user_id) in group_settings[chat_id]["admin_permissions"]:
+                    del group_settings[chat_id]["admin_permissions"][str(user_id)]
+            
+            await save_settings(chat_id)
+            await query.answer(f"{member.user.first_name} has been removed from admin!", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
 
     return ConversationHandler.END
