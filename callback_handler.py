@@ -1,5 +1,6 @@
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
+from telegram import ChatPermissions
 from telegram.ext import ContextTypes, ConversationHandler
 from config import group_settings, DEFAULT_SETTINGS, get_default_settings
 from database import save_settings, get_chat_settings
@@ -417,16 +418,106 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=await get_members_mgmt_keyboard(chat_id), parse_mode='HTML')
 
     elif data == "mgmt_unmute_all":
-        await query.answer("Unmuting all members (Simulated)...", show_alert=True)
+        try:
+            await query.answer("Unmuting all members...", show_alert=False)
+            # Get all chat members and unmute those who are restricted
+            async for member in context.bot.get_chat_administrators(chat_id):
+                pass  # Skip admins
+            
+            # Unmute all restricted members
+            unmuted_count = 0
+            async for member in context.bot.get_chat_members(chat_id):
+                if member.status == "restricted" and not member.can_send_messages:
+                    try:
+                        await context.bot.restrict_chat_member(
+                            chat_id,
+                            member.user.id,
+                            permissions=ChatPermissions(
+                                can_send_messages=True,
+                                can_send_media_messages=True,
+                                can_send_polls=True,
+                                can_send_other_messages=True,
+                                can_add_web_page_previews=True,
+                                can_change_info=True,
+                                can_invite_users=True,
+                                can_pin_messages=True
+                            )
+                        )
+                        unmuted_count += 1
+                    except:
+                        pass
+            
+            await query.answer(f"Successfully unmuted {unmuted_count} members!", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
 
     elif data == "mgmt_unban_all":
-        await query.answer("Unbanning all members (Simulated)...", show_alert=True)
+        try:
+            await query.answer("Unbanning all members...", show_alert=False)
+            # Get banned members and unban them
+            unbanned_count = 0
+            banned_members = []
+            
+            # Fetch banned members (pagination)
+            offset = 0
+            while True:
+                bans = await context.bot.get_ban(chat_id, limit=100, offset=offset)
+                if not bans:
+                    break
+                banned_members.extend(bans)
+                offset += 100
+                if len(bans) < 100:
+                    break
+            
+            # Unban each member
+            for ban in banned_members:
+                try:
+                    await context.bot.unban_chat_member(chat_id, ban.user.id)
+                    unbanned_count += 1
+                except:
+                    pass
+            
+            await query.answer(f"Successfully unbanned {unbanned_count} members!", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
 
     elif data == "mgmt_kick_muted":
-        await query.answer("Kicking muted users (Simulated)...", show_alert=True)
+        try:
+            await query.answer("Kicking muted users...", show_alert=False)
+            kicked_count = 0
+            
+            async for member in context.bot.get_chat_members(chat_id):
+                # Check if user is muted (restricted and can't send messages)
+                if member.status == "restricted" and not member.can_send_messages:
+                    try:
+                        await context.bot.ban_chat_member(chat_id, member.user.id)
+                        await context.bot.unban_chat_member(chat_id, member.user.id)
+                        kicked_count += 1
+                    except:
+                        pass
+            
+            await query.answer(f"Successfully kicked {kicked_count} muted users!", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
 
     elif data == "mgmt_kick_deleted":
-        await query.answer("Kicking deleted accounts (Simulated)...", show_alert=True)
+        try:
+            await query.answer("Kicking deleted accounts...", show_alert=False)
+            kicked_count = 0
+            
+            async for member in context.bot.get_chat_members(chat_id):
+                # Check if account is deleted (first_name is empty or "Deleted")
+                if not member.user.first_name or member.user.first_name == "Deleted" or member.user.is_deleted:
+                    try:
+                        await context.bot.ban_chat_member(chat_id, member.user.id)
+                        await context.bot.unban_chat_member(chat_id, member.user.id)
+                        kicked_count += 1
+                    except:
+                        pass
+            
+            await query.answer(f"Successfully kicked {kicked_count} deleted accounts!", show_alert=True)
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
 
     elif data == "settings_bot_protection":
         settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
