@@ -1,7 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ChatPermissions
 from telegram.ext import ContextTypes
 from config import group_settings, DEFAULT_SETTINGS, get_default_settings
-from database import save_settings
+from database import save_settings, get_chat_settings
 from common import check_permission
 
 from ui import get_user_info_keyboard

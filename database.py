@@ -22,6 +22,15 @@ async def load_all_settings():
     except Exception as e:
         logging.error(f"Error loading settings from MongoDB: {e}")
 
+def convert_keys_to_strings(data):
+    """Recursively convert all dictionary keys to strings for MongoDB compatibility."""
+    if isinstance(data, dict):
+        return {str(k): convert_keys_to_strings(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [convert_keys_to_strings(item) for item in data]
+    else:
+        return data
+
 async def save_settings(chat_id: int):
     """Saves a specific chat's settings to MongoDB."""
     if chat_id not in group_settings:
@@ -29,6 +38,8 @@ async def save_settings(chat_id: int):
         
     try:
         data = copy.deepcopy(group_settings[chat_id])
+        # Convert all keys to strings for MongoDB
+        data = convert_keys_to_strings(data)
         await settings_collection.update_one(
             {'chat_id': chat_id},
             {'$set': data},
