@@ -10,7 +10,7 @@ from common import (
     ADD_CUSTOM_BLOCK, SET_MSG_MIN, SET_MSG_MAX, SET_WELCOME_AUTODEL, SET_RULES_TEXT, 
     SET_FLOOD_MSGS, SET_FLOOD_TIME, SET_GROUP_LINK
 )
-from blocking import handle_blocking, handle_clean_service, handle_pre_message_checks
+from blocking import handle_blocking, handle_clean_service
 from bot_protection import handle_bot_protection, bot_protection_command
 from self_destruction import schedule_self_destruction
 
