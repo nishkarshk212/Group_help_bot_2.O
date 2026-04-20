@@ -41,6 +41,7 @@ from ui import (
     get_report_advanced_settings_keyboard,
     get_members_mgmt_keyboard
 )
+from other_features import HELP_DETAILS
 
 async def set_rules_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = context.user_data.get('setting_chat_id')
@@ -967,6 +968,68 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.edit_reply_markup(reply_markup=await get_user_info_keyboard(user_id, chat_id, context))
         except Exception as e:
             await query.answer(f"Error: {str(e)}", show_alert=True)
+
+    # Help system handlers
+    elif data.startswith("help_"):
+        help_key = data.replace("help_", "")
+        if help_key in HELP_DETAILS:
+            text = HELP_DETAILS[help_key] + "\n\n<i>Tap Back to return to help menu.</i>"
+            keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="help_main")]]
+            try:
+                await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+            except: pass
+    
+    elif data == "help_main":
+        text = (
+            f"<b>🤖 Bot Help & Features</b>\n\n"
+            f"Welcome! Click any button below to learn about a specific feature.\n\n"
+            f"<b>Categories:</b>\n"
+            f"• <b>Admin Commands</b> - Moderation tools\n"
+            f"• <b>Settings</b> - Configure bot behavior\n"
+            f"• <b>User Features</b> - Commands for everyone\n"
+            f"• <b>Anti-Spam</b> - Protection features\n\n"
+            f"<i>Tap a button to see detailed information!</i>"
+        )
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("🛡 Admin Commands", callback_data="help_admin"),
+                InlineKeyboardButton("⚙️ Settings", callback_data="help_settings")
+            ],
+            [
+                InlineKeyboardButton("👥 User Commands", callback_data="help_users"),
+                InlineKeyboardButton("🚫 Anti-Spam", callback_data="help_antispam")
+            ],
+            [
+                InlineKeyboardButton("🔇 Mute/Ban", callback_data="help_muteban"),
+                InlineKeyboardButton("📊 Reports", callback_data="help_reports")
+            ],
+            [
+                InlineKeyboardButton("🎨 Media Blocks", callback_data="help_media"),
+                InlineKeyboardButton("🔓 Free System", callback_data="help_free")
+            ],
+            [
+                InlineKeyboardButton("👋 Welcome", callback_data="help_welcome"),
+                InlineKeyboardButton("🌐 Translation", callback_data="help_translation")
+            ],
+            [
+                InlineKeyboardButton("⚡ Flood Control", callback_data="help_flood"),
+                InlineKeyboardButton("📝 Rules", callback_data="help_rules")
+            ],
+            [
+                InlineKeyboardButton("🔍 Info Command", callback_data="help_info"),
+                InlineKeyboardButton("👮 Staff", callback_data="help_staff")
+            ],
+            [
+                InlineKeyboardButton("🔗 Link & Filters", callback_data="help_linkfilters"),
+                InlineKeyboardButton("💾 Self Destruct", callback_data="help_selfdestruct")
+            ],
+            [InlineKeyboardButton("❌ Close", callback_data="close_settings")]
+        ]
+        
+        try:
+            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+        except: pass
 
     elif data == "close_settings":
         await query.message.delete()
