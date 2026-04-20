@@ -780,6 +780,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await save_settings(chat_id)
         await query.message.edit_reply_markup(reply_markup=await get_user_roles_keyboard(user_id, chat_id))
 
+    elif data.startswith("open_perms_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            text = (
+                f"🕹 <b>Permissions</b>\n"
+                f"👤 {member.user.mention_html()} [<code>{user_id}</code>]\n"
+                f"👥 {query.message.chat.title or 'Group'}"
+            )
+            await query.message.edit_text(text, reply_markup=await get_user_permissions_keyboard(user_id, chat_id), parse_mode='HTML')
+        except: pass
+
     elif data.startswith("user_perms_"):
         user_id = int(data.split("_")[2])
         try:
