@@ -52,16 +52,39 @@ async def get_custom_roles_keyboard(chat_id: int):
     ]
     return InlineKeyboardMarkup(keyboard)
 
-async def get_user_info_keyboard(user_id: int, chat_id: int):
-    """Returns the user info command keyboard."""
+async def get_user_info_keyboard(user_id: int, chat_id: int, context=None):
+    """Returns the user info command keyboard with dynamic button states."""
+    is_muted = False
+    is_banned = False
+    
+    # Get user member status to determine button states
+    if context:
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            
+            # Check if user is muted (restricted)
+            if hasattr(member, 'permissions'):
+                perms = member.permissions
+                if perms and not perms.can_send_messages:
+                    is_muted = True
+            
+            # Check if user is banned
+            is_banned = member.status == "kicked"
+        except:
+            pass
+    
+    # Set button text based on user status
+    mute_btn_text = "🔊 Unmute" if is_muted else "🔇 Mute"
+    ban_btn_text = "✅ Unban" if is_banned else "🚫 Ban"
+    
     keyboard = [
         [
             InlineKeyboardButton("❗ Warns", callback_data=f"user_warns_{user_id}"),
             InlineKeyboardButton("➰ Roles", callback_data=f"user_roles_{user_id}")
         ],
         [
-            InlineKeyboardButton("🔊 Mute", callback_data=f"user_mute_{user_id}"),
-            InlineKeyboardButton("🚫 Ban", callback_data=f"user_ban_{user_id}")
+            InlineKeyboardButton(mute_btn_text, callback_data=f"user_mute_{user_id}"),
+            InlineKeyboardButton(ban_btn_text, callback_data=f"user_ban_{user_id}")
         ],
         [InlineKeyboardButton("🕹 Permissions ↗️", callback_data=f"user_perms_{user_id}")]
     ]

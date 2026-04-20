@@ -139,7 +139,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_settings[chat_id] = get_default_settings()
 
     is_private = query.message.chat.type == "private"
-    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link", "toggle_perm_", "unmute_user_"]
+    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link", "toggle_perm_", "unmute_user_", "user_mute_", "user_ban_"]
     
     if not is_private and any(data.startswith(prefix) for prefix in admin_only_data):
         member = await context.bot.get_chat_member(chat_id, query.from_user.id)
@@ -752,7 +752,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"⤵️ <b>Join:</b> 20 Apr 2026, 08:15\n" # Mocked for UI
                 f"🇬🇧 <b>Language:</b> {user.language_code or 'en'}"
             )
-            await query.message.edit_text(text, reply_markup=await get_user_info_keyboard(user_id, chat_id), parse_mode='HTML')
+            await query.message.edit_text(text, reply_markup=await get_user_info_keyboard(user_id, chat_id, context), parse_mode='HTML')
         except Exception as e:
             await query.answer(f"Error fetching user info: {e}", show_alert=True)
 
@@ -772,11 +772,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = int(parts[2])
         role_key = "_".join(parts[3:])
         
-        settings = await get_chat_settings(chat_id)
-        if "user_roles" not in settings: settings["user_roles"] = {}
-        if str(user_id) not in settings["user_roles"]: settings["user_roles"][str(user_id)] = {}
+        # Update local cache
+        if chat_id not in group_settings:
+            group_settings[chat_id] = get_default_settings()
+        if "user_roles" not in group_settings[chat_id]:
+            group_settings[chat_id]["user_roles"] = {}
+        if str(user_id) not in group_settings[chat_id]["user_roles"]:
+            group_settings[chat_id]["user_roles"][str(user_id)] = {}
         
-        settings["user_roles"][str(user_id)][role_key] = not settings["user_roles"][str(user_id)].get(role_key, False)
+        # Toggle the role
+        group_settings[chat_id]["user_roles"][str(user_id)][role_key] = not group_settings[chat_id]["user_roles"][str(user_id)].get(role_key, False)
+        
+        # Save to database
         await save_settings(chat_id)
         await query.message.edit_reply_markup(reply_markup=await get_user_roles_keyboard(user_id, chat_id))
 
@@ -854,6 +861,54 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.answer("User has been unmuted!", show_alert=True)
             # Delete the message with buttons
             await query.message.delete()
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+
+    elif data.startswith("user_warns_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+            warns = settings.get("user_warns", {}).get(str(user_id), 0)
+            
+            text = (
+                f"<b>Warns for</b> {member.user.mention_html()}\n"
+                f"<code>{user_id}</code>\n\n"
+                f"❗ <b>Current warns:</b> {warns}/3\n\n"
+                f"<i>Use /warn and /unwarn commands to manage warns.</i>"
+            )
+            keyboard = [[InlineKeyboardButton("Back 🔙", callback_data=f"user_info_{user_id}")]]
+            await query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
+        except: pass
+
+    elif data.startswith("user_mute_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            # Check if user is already restricted
+            permissions = member.until_date  # If has restrictions
+            
+            # Mute the user (restrict all permissions)
+            await context.bot.restrict_chat_member(
+                chat_id,
+                user_id,
+                permissions=ChatPermissions(can_send_messages=False)
+            )
+            await query.answer(f"{member.user.first_name} has been muted!", show_alert=True)
+            # Refresh the info keyboard
+            await query.message.edit_reply_markup(reply_markup=await get_user_info_keyboard(user_id, chat_id, context))
+        except Exception as e:
+            await query.answer(f"Error: {str(e)}", show_alert=True)
+
+    elif data.startswith("user_ban_"):
+        user_id = int(data.split("_")[2])
+        try:
+            member = await context.bot.get_chat_member(chat_id, user_id)
+            # Ban the user
+            await context.bot.ban_chat_member(chat_id, user_id)
+            await query.answer(f"{member.user.first_name} has been banned!", show_alert=True)
+            # Refresh the info keyboard
+            await query.message.edit_reply_markup(reply_markup=await get_user_info_keyboard(user_id, chat_id, context))
         except Exception as e:
             await query.answer(f"Error: {str(e)}", show_alert=True)
 

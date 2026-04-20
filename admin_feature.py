@@ -46,7 +46,7 @@ async def info_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🇬🇧 <b>Language:</b> {target_user.language_code or 'en'}"
     )
     
-    await update.message.reply_text(text, reply_markup=await get_user_info_keyboard(user_id, chat_id), parse_mode='HTML')
+    await update.message.reply_text(text, reply_markup=await get_user_info_keyboard(user_id, chat_id, context), parse_mode='HTML')
 
 async def staff_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_permission(update, context, "staff"):
