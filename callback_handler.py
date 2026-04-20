@@ -139,7 +139,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_settings[chat_id] = get_default_settings()
 
     is_private = query.message.chat.type == "private"
-    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles"]
+    admin_only_data = ["settings_blocking", "settings_welcome", "settings_clean", "settings_custom", "toggle_", "open_settings_here", "settings_main", "perm_", "settings_as_", "as_", "mgmt_", "settings_members_mgmt", "settings_report", "report_send_", "toggle_report_", "settings_permissions_menu", "settings_anon_admin", "settings_change_settings", "settings_custom_roles", "settings_link", "set_group_link"]
     
     if not is_private and any(data.startswith(prefix) for prefix in admin_only_data):
         member = await context.bot.get_chat_member(chat_id, query.from_user.id)
@@ -554,6 +554,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['setting_chat_id'] = chat_id
         await query.message.reply_text(apply_font("Send the new group regulations/rules:"))
         return SET_RULES_TEXT
+
+    elif data == "settings_link":
+        settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+        custom_link = settings.get("custom_group_link")
+        if custom_link:
+            link_status = f"Current link: {custom_link}"
+        else:
+            link_status = "No custom link set yet."
+        
+        text = (
+            f"<b>Group Help</b>  <pre>admin</pre>\n"
+            f"🔗 <b>Group Link</b>\n"
+            f"{apply_font('From this menu you can set a custom link for your group.')}\n\n"
+            f"{link_status}"
+        )
+        await query.message.edit_text(text, reply_markup=await get_group_link_settings_keyboard(chat_id), parse_mode='HTML')
+
+    elif data == "set_group_link":
+        context.user_data['setting_chat_id'] = chat_id
+        await query.message.reply_text(apply_font("Send the new group link (must start with http:// or https://):"))
+        return SET_GROUP_LINK
 
     elif data == "settings_clean":
         text = "🧹 " + apply_font("Clean Service") + " 🧹\n\n" + apply_font("Select service messages to auto-delete:")
