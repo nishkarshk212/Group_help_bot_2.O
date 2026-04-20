@@ -297,12 +297,28 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.edit_text(text, reply_markup=await get_antispam_forwarding_keyboard(chat_id), parse_mode='HTML')
 
     elif data == "settings_quote_menu":
+        settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+        penalty = settings.get("antispam_quote_penalty", "off").capitalize()
+        delete = "Yes" if settings.get("antispam_quote_delete") else "No"
         text = (
             f"<b>{apply_font('Group Help')}</b>\n"
             f"💭 <b>{apply_font('Quote')}</b>\n"
-            f"{apply_font('Select punishment for users who send messages containing quotes from external chats.')}"
+            f"{apply_font('Select punishment for users who send messages containing quotes from external chats.')}\n\n"
+            f"<b>{apply_font('Penalty:')}</b> {penalty}\n"
+            f"<b>{apply_font('Deletion:')}</b> {delete}"
         )
         await query.message.edit_text(text, reply_markup=await get_antispam_quote_keyboard(chat_id), parse_mode='HTML')
+
+    elif data.startswith("set_as_quote_penalty_"):
+        penalty = data.replace("set_as_quote_penalty_", "")
+        group_settings[chat_id]["antispam_quote_penalty"] = penalty
+        await save_settings(chat_id)
+        await query.message.edit_reply_markup(reply_markup=await get_antispam_quote_keyboard(chat_id))
+
+    elif data == "toggle_as_quote_delete":
+        group_settings[chat_id]["antispam_quote_delete"] = not group_settings[chat_id].get("antispam_quote_delete", False)
+        await save_settings(chat_id)
+        await query.message.edit_reply_markup(reply_markup=await get_antispam_quote_keyboard(chat_id))
 
     elif data == "settings_total_links_menu":
         settings = group_settings.get(chat_id, DEFAULT_SETTINGS)

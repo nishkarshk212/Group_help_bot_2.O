@@ -111,6 +111,8 @@ DEFAULT_SETTINGS = {
     "antispam_forward_users_penalty": "off",
     "antispam_forward_bots_penalty": "off",
     "antispam_quote": False,
+    "antispam_quote_penalty": "off",
+    "antispam_quote_delete": False,
     "antispam_quote_channels_penalty": "off",
     "antispam_quote_groups_penalty": "off",
     "antispam_quote_users_penalty": "off",

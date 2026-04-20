@@ -557,9 +557,26 @@ async def get_antispam_forwarding_keyboard(chat_id: int):
     return InlineKeyboardMarkup(keyboard)
 
 async def get_antispam_quote_keyboard(chat_id: int):
+    settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+    penalty = settings.get("antispam_quote_penalty", "off")
+    delete = settings.get("antispam_quote_delete", False)
+
+    def get_penalty_btn(label, p_type):
+        display_icon = ""
+        if p_type == "off": display_icon = "❌ "
+        elif p_type == "warn": display_icon = "❗ "
+        elif p_type == "kick": display_icon = "❗ "
+        elif p_type == "mute": display_icon = "🔇 "
+        elif p_type == "ban": display_icon = "🚫 "
+
+        is_active = (penalty == p_type)
+        prefix = display_icon if is_active else ""
+        return InlineKeyboardButton(f"{prefix}{label}", callback_data=f"set_as_quote_penalty_{p_type}")
+
     keyboard = [
-        [InlineKeyboardButton(f"📣 Channels", callback_data="set_as_quote_chan"), InlineKeyboardButton(f"👥 Groups", callback_data="set_as_quote_group")],
-        [InlineKeyboardButton(f"👤 Users", callback_data="set_as_quote_user"), InlineKeyboardButton(f"🤖 Bots", callback_data="set_as_quote_bot")],
+        [get_penalty_btn("Off", "off"), get_penalty_btn("Warn", "warn"), get_penalty_btn("Kick", "kick")],
+        [get_penalty_btn("Mute", "mute"), get_penalty_btn("Ban", "ban")],
+        [InlineKeyboardButton(f"🗑 Delete Messages {'✅' if delete else '❌'}", callback_data="toggle_as_quote_delete")],
         [
             InlineKeyboardButton("🔙 Back", callback_data="settings_antispam"),
             InlineKeyboardButton("☀️ Exceptions", callback_data="as_quote_exceptions")
