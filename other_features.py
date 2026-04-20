@@ -38,9 +38,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='Markdown', disable_web_page_preview=True)
 
 async def rules_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not await check_permission(update, context, "rules"):
-        return
-
     chat_id = update.effective_chat.id
     settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
     rules = settings.get("group_rules", "No rules set yet.")

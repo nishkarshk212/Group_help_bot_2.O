@@ -78,7 +78,7 @@ DEFAULT_SETTINGS = {
         "staff": 2,
         "rules": 1,
         "me": 3,
-        "translate": 2,
+        "info": 2,
         "link": 2
     },
     

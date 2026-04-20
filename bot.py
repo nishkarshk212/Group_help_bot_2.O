@@ -10,7 +10,7 @@ from common import (
     ADD_CUSTOM_BLOCK, SET_MSG_MIN, SET_MSG_MAX, SET_WELCOME_AUTODEL, SET_RULES_TEXT, 
     SET_FLOOD_MSGS, SET_FLOOD_TIME, SET_GROUP_LINK
 )
-from blocking import handle_blocking, handle_clean_service
+from blocking import handle_blocking, handle_clean_service, handle_pre_message_checks
 from bot_protection import handle_bot_protection, bot_protection_command
 from self_destruction import schedule_self_destruction
 
@@ -42,6 +42,17 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
+
+async def pre_message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Pre-handler that runs for ALL messages including commands."""
+    if not update.effective_chat or update.effective_chat.type == "private":
+        return
+    
+    chat_id = update.effective_chat.id
+    settings = group_settings.get(chat_id, DEFAULT_SETTINGS)
+    
+    # Handle self-destruction for ALL messages
+    await schedule_self_destruction(update, context, settings)
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_chat:
@@ -111,9 +122,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check for filters
     if await handle_filters(update, context, settings):
         return
-
-    # Handle self-destruction
-    await schedule_self_destruction(update, context, settings)
 
 async def weekly_cache_clear_job(context: ContextTypes.DEFAULT_TYPE):
     """Clears unnecessary in-memory data every week and notifies log group."""
@@ -217,6 +225,9 @@ if __name__ == '__main__':
     )
 
     # Register handlers
+    # Add pre-message handler for ALL messages (including commands)
+    application.add_handler(MessageHandler(filters.ALL, pre_message_handler))
+    
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('staff', staff_command))
     application.add_handler(CommandHandler('rules', rules_command))

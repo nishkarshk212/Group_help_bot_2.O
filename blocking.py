@@ -118,9 +118,13 @@ async def handle_blocking(update: Update, context):
         import logging
         logging.debug(f"Message from user {update.effective_user.id} is NOT forwarded")
             
+    # Check for commands (block_command)
     if msg.text and msg.text.startswith("/") and settings.get("block_command") and not is_user_freed("block_command"):
-        # Check if it's a command for this bot (we might want to allow start/settings)
-        if not msg.text.startswith(("/start", "/settings", "/free")):
+        import logging
+        # Allow essential bot commands
+        allowed_cmds = ("/start", "/settings", "/free", "/help", "/rules", "/me", "/info", "/link", "/report")
+        if not any(msg.text.startswith(cmd) for cmd in allowed_cmds):
+            logging.info(f"Command blocking: Deleting command {msg.text.split()[0]} from user {update.effective_user.id}")
             should_delete = True
             
     if msg.contact and settings.get("block_contact") and not is_user_freed("block_contact"):
